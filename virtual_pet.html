@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 아바타</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<style>
+/* ============================================================
+   CUSTOMIZABLE DESIGN TOKENS  ←  여기서 박스/색상/폰트 수정
+   ============================================================ */
+:root {
+  /* 배경 */
+  --bg-color: #fdf6ee;
+  --bg-grad-a: #fde9d4;
+  --bg-grad-b: #d4f0f0;
+
+  /* 메인 박스 */
+  --box-bg:        #fff9f3;
+  --box-border:    #e8c9a0;
+  --box-radius:    24px;
+  --box-shadow:    0 8px 32px rgba(90,60,30,0.10), 0 2px 8px rgba(90,60,30,0.06);
+  --box-floor-color: #f5e4cc;   /* 바닥 그라디언트 색 */
+
+  /* 글꼴 */
+  --font-title:   'Jua', sans-serif;
+  --font-body:    'Gowun Dodum', sans-serif;
+
+  /* 색상 팔레트 */
+  --accent:   #f4845f;
+  --accent2:  #7ec8c8;
+  --text:     #3a2e26;
+  --muted:    #b89a7a;
+  --shadow:   rgba(90,60,30,0.10);
+
+  /* 스탯 바 */
+  --stat-bar:      #e8c9a0;
+  --stat-low:      #e05252;
+  --stat-mid:      #f4c05f;
+  --stat-high:     #7ec8c8;
+
+  /* 버튼 */
+  --btn-bg:    #f4845f;
+  --btn-text:  #fff;
+
+  /* 팝업 */
+  --popup-bg:    rgba(58,46,38,0.45);
+  --panel-bg:    #fff9f3;
+  --panel-border:#e8c9a0;
+
+  /* 액션 버튼 */
+  --action-btn-size:   48px;
+  --action-btn-bg:     rgba(255,249,243,0.92);
+  --action-btn-border: #e8c9a0;
+  --action-btn-radius: 14px;
+
+  /* 수면 오버레이 */
+  --sleep-overlay: rgba(15,10,30,0.88);
+
+  /* 박스 크기 */
+  --box-w: 380px;
+  --box-h: 280px;
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg-color);
+  background-image:
+    radial-gradient(circle at 20% 20%, var(--bg-grad-a) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, var(--bg-grad-b) 0%, transparent 55%);
+  font-family: var(--font-body);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  user-select: none;
+}
+
+/* ============================================================
+   SCENE
+   ============================================================ */
+.scene { position: relative; width: var(--box-w); }
+
+/* header row */
+.scene-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+.pet-name-label {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  min-width: 60px;
+}
+.pet-name-label.empty {
+  color: var(--muted);
+  font-size: 1rem;
+  font-family: var(--font-body);
+}
+
+/* stats row */
+.stats-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  position: relative;
+}
+.stat-icon { font-size: 1.05rem; }
+.stat-bar-wrap {
+  width: 36px; height: 6px;
+  background: var(--stat-bar);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease, background 0.5s ease;
+}
+.stat-bar-fill.low  { background: var(--stat-low); }
+.stat-bar-fill.mid  { background: var(--stat-mid); }
+.stat-bar-fill.high { background: var(--stat-high); }
+
+/* photo button */
+.photo-btn {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.photo-btn:hover { transform: scale(1.1); background: #d96840; }
+
+/* ============================================================
+   PET BOX
+   ============================================================ */
+.pet-box {
+  width: var(--box-w);
+  height: var(--box-h);
+  background: var(--box-bg);
+  border: 2.5px solid var(--box-border);
+  border-radius: var(--box-radius);
+  box-shadow: var(--box-shadow);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  transition: box-shadow 0.5s;
+}
+/* floor gradient */
+.pet-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: linear-gradient(to top, var(--box-floor-color), transparent);
+  border-radius: 0 0 calc(var(--box-radius) - 2px) calc(var(--box-radius) - 2px);
+  pointer-events: none;
+  z-index: 1;
+}
+.pet-box.sad-glow   { box-shadow: 0 8px 32px rgba(80,120,255,0.22), 0 2px 8px var(--shadow); }
+.pet-box.angry-glow { box-shadow: 0 8px 32px rgba(255,80,80,0.26), 0 2px 8px var(--shadow); }
+
+/* no avatar msg */
+.no-avatar-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.6;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+.avatar-wrap {
+  position: absolute;
+  bottom: 30px;
+  width: 80px; height: 80px;
+  will-change: left, bottom;
+  z-index: 3;
+}
+.avatar-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: transform 0.1s;
+}
+.avatar-wrap.flipped .avatar-img { transform: scaleX(-1); }
+
+/* walk bob */
+@keyframes walkBob {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.avatar-wrap.walking .avatar-img { animation: walkBob 0.4s ease-in-out infinite; }
+.avatar-wrap.flipped.walking .avatar-img { animation: walkBob 0.4s ease-in-out infinite; transform: scaleX(-1); }
+/* override: flipped+walking needs both */
+.avatar-wrap.flipped.walking .avatar-img {
+  animation: walkBobFlip 0.4s ease-in-out infinite;
+}
+@keyframes walkBobFlip {
+  0%,100% { transform: scaleX(-1) translateY(0); }
+  50%      { transform: scaleX(-1) translateY(-3px); }
+}
+
+@keyframes idleWobble {
+  0%,100% { transform: rotate(0deg) translateY(0); }
+  25%      { transform: rotate(-2.5deg) translateY(-1px); }
+  75%      { transform: rotate(2.5deg) translateY(-1px); }
+}
+.avatar-wrap.wobbling .avatar-img { animation: idleWobble 0.45s ease-in-out; }
+
+@keyframes jumpAnim {
+  0%,100% { transform: translateY(0); }
+  40%     { transform: translateY(-24px) scaleY(1.05); }
+  55%     { transform: translateY(-20px); }
+}
+.avatar-wrap.jumping { animation: jumpAnim 0.5s ease; }
+
+/* heart pop */
+.heart-pop {
+  position: absolute;
+  top: -28px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  opacity: 0;
+  pointer-events: none;
+  animation: heartPop 0.7s ease forwards;
+}
+@keyframes heartPop {
+  0%   { opacity:0; transform: translateX(-50%) scale(0.5) translateY(0); }
+  30%  { opacity:1; transform: translateX(-50%) scale(1.3) translateY(-8px); }
+  70%  { opacity:1; transform: translateX(-50%) scale(1) translateY(-14px); }
+  100% { opacity:0; transform: translateX(-50%) scale(0.8) translateY(-22px); }
+}
+
+/* ============================================================
+   ACTION BUTTONS  (bottom-right outside box)
+   ============================================================ */
+.action-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+.action-btn {
+  width: var(--action-btn-size);
+  height: var(--action-btn-size);
+  background: var(--action-btn-bg);
+  border: 1.5px solid var(--action-btn-border);
+  border-radius: var(--action-btn-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, background 0.15s, opacity 0.2s;
+  overflow: hidden;
+  position: relative;
+}
+.action-btn:hover:not(:disabled) { transform: scale(1.08); background: #fff0e6; }
+.action-btn:active:not(:disabled) { transform: scale(0.96); }
+.action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.action-btn img {
+  width: 30px; height: 30px;
+  object-fit: contain;
+  pointer-events: none;
+}
+/* fallback emoji if no img */
+.action-btn .btn-fallback { font-size: 1.4rem; }
+
+/* ============================================================
+   FOOD ITEM (falling food)
+   ============================================================ */
+.food-item {
+  position: absolute;
+  width: 48px; height: 48px;
+  z-index: 10;
+  pointer-events: none;
+}
+.food-item img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ============================================================
+   SHOWER PROPS  (shower curtain + showerhead — always in box)
+   ============================================================ */
+.shower-scene {
+  position: absolute;
+  left: -160px; bottom: 0;
+  width: 140px; height: 200px;
+  z-index: 4;
+  pointer-events: none;
+  transition: left 0.5s cubic-bezier(.4,0,.2,1);
+}
+.shower-scene.visible { left: 6px; }
+.shower-bg-img, .shower-curtain-img {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  object-position: bottom left;
+}
+.shower-curtain-img {
+  z-index: 2;
+  transform-origin: left bottom;
+  transition: transform 0.45s cubic-bezier(.4,0,.2,1);
+}
+.shower-curtain-img.closed { transform: scaleX(1); }
+.shower-curtain-img.open   { transform: scaleX(0.2); }
+
+/* sparkle burst */
+.sparkle-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.sparkle-burst.show { opacity: 1; }
+.sparkle {
+  position: absolute;
+  font-size: 1.3rem;
+  animation: sparklePop 0.7s ease forwards;
+}
+@keyframes sparklePop {
+  0%   { transform: scale(0) translate(0,0); opacity:1; }
+  60%  { opacity:1; }
+  100% { transform: scale(1.2) translate(var(--tx), var(--ty)); opacity:0; }
+}
+
+/* ============================================================
+   SLEEP OVERLAY
+   ============================================================ */
+.sleep-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--sleep-overlay);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+.sleep-overlay.show { opacity: 1; pointer-events: all; }
+.sleep-overlay img {
+  max-width: 280px;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 16px;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.5));
+}
+.sleep-overlay .zzz-anim {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + 80px);
+  transform: translateY(-60px);
+  font-size: 1.6rem;
+  animation: sleepZzz 1.2s ease-in-out infinite;
+}
+@keyframes sleepZzz {
+  0%   { opacity:0; transform: translateY(-60px) scale(0.7); }
+  30%  { opacity:1; }
+  80%  { opacity:1; transform: translateY(-90px) scale(1); }
+  100% { opacity:0; transform: translateY(-100px) scale(0.8); }
+}
+
+/* ============================================================
+   STAT TOOLTIP
+   ============================================================ */
+.stat-tooltip {
+  position: fixed;
+  background: rgba(58,46,38,0.9);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 300;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.stat-tooltip.show { opacity: 1; }
+
+/* ============================================================
+   SETTINGS POPUP
+   ============================================================ */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--popup-bg);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.popup-overlay.hidden { display: none; }
+
+.popup-panel {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(90,60,30,0.2);
+  position: relative;
+}
+.popup-panel h2 {
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  margin-bottom: 18px;
+}
+.popup-panel .close-btn {
+  position: absolute;
+  top: 14px; right: 18px;
+  background: none; border: none;
+  font-size: 1.2rem; cursor: pointer;
+  color: var(--muted);
+}
+.popup-panel .close-btn:hover { color: var(--text); }
+
+/* name input */
+.name-input-wrap { margin-bottom: 20px; }
+.name-input-wrap label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.name-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--panel-border);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.name-input:focus { border-color: var(--accent); }
+
+/* image slots */
+.img-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.img-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.img-slot label { font-size: 0.8rem; color: var(--muted); }
+.img-preview-wrap {
+  width: 90px; height: 90px;
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.img-preview-wrap:hover { border-color: var(--accent); }
+.img-preview-wrap img { width:100%; height:100%; object-fit:contain; display:none; }
+.img-preview-wrap img.loaded { display:block; }
+.img-preview-wrap .plus-icon { font-size: 1.6rem; color: var(--muted); }
+.img-preview-wrap.has-img .plus-icon { display: none; }
+.img-preview-wrap .edit-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.38);
+  color: #fff; font-size: 0.72rem;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+  border-radius: 10px;
+}
+.img-preview-wrap:hover .edit-overlay { opacity: 1; }
+.file-input { display: none; }
+
+/* apply btn */
+.apply-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.apply-btn:hover { background: #d96840; transform: translateY(-1px); }
+.apply-btn:active { transform: translateY(0); }
+
+/* ============================================================
+   CROPPER POPUP
+   ============================================================ */
+.cropper-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20,14,8,0.78);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.cropper-overlay.hidden { display: none; }
+.cropper-panel {
+  background: #2a2018;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%; max-width: 440px;
+  display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+}
+.cropper-panel h3 { font-family: var(--font-title); color:#fff; font-size:1rem; }
+.cropper-canvas-wrap {
+  width: 100%; height: 300px;
+  background: #1a1208;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cropper-canvas-wrap img { display:block; max-width:100%; max-height:100%; }
+.cropper-tools { display:flex; gap:8px; flex-wrap:wrap; }
+.crop-tool-btn {
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.crop-tool-btn:hover { background: rgba(255,255,255,0.2); }
+.crop-tool-btn.primary { background: var(--accent); border-color: var(--accent); margin-left:auto; }
+.crop-tool-btn.primary:hover { background: #d96840; }
+.crop-tool-btn.cancel { color: #999; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+  ★  DEVELOPER CONFIG  —  GitHub에서 이미지 경로만 여기서 수정
+     (유저가 업로드하는 아바타 이미지와 별개)
+     상대경로 OK: 'assets/bed.png'  또는 외부 URL 모두 가능
+     이미지가 없으면 fallback 텍스트 이모지로 표시됨
+  ============================================================ -->
+<script>
+const GAME_ASSETS = {
+  /* 수면 버튼 아이콘 */        sleepBtnIcon:   'assets/btn_sleep.png',
+  /* 식사 버튼 아이콘 */        eatBtnIcon:     'assets/btn_eat.png',
+  /* 목욕 버튼 아이콘 */        washBtnIcon:    'assets/btn_wash.png',
+
+  /* 수면 중 화면에 보일 이미지 */ sleepImage:  'assets/sleeping.png',
+  /* 먹는 표정 이미지 */          eatImage:    'assets/eating.png',
+  /* 음식 아이템 이미지 */        foodImage:   'assets/food.png',
+
+  /* 샤워 배경(샤워기) 이미지 */ showerBg:    'assets/shower_bg.png',
+  /* 샤워 커튼 이미지 */         showerCurtain:'assets/shower_curtain.png',
+
+  /* fallback 이모지 (이미지 없을 때) */
+  fallbacks: { sleep:'🛏️', eat:'🍖', wash:'🛁' }
+};
+</script>
+
+<!-- stat tooltip -->
+<div class="stat-tooltip" id="statTooltip"></div>
+
+<!-- sleep overlay -->
+<div class="sleep-overlay" id="sleepOverlay">
+  <img id="sleepImg" src="" alt="자는 중">
+  <div class="zzz-anim">💤</div>
+</div>
+
+<!-- ============================================================
+  MAIN SCENE
+  ============================================================ -->
+<div class="scene">
+  <!-- header -->
+  <div class="scene-header">
+    <div class="pet-name-label empty" id="petNameLabel">이름 없음</div>
+    <div class="stats-row" id="statsRow">
+      <div class="stat-item" data-stat="hunger" data-label="식욕">
+        <span class="stat-icon">🍖</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barHunger" style="width:80%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="sleep" data-label="수면">
+        <span class="stat-icon">💤</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barSleep" style="width:70%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="love" data-label="애정">
+        <span class="stat-icon">💕</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barLove" style="width:85%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="clean" data-label="청결">
+        <span class="stat-icon">🛁</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barClean" style="width:75%"></div></div>
+      </div>
+      <button class="photo-btn" id="openSettingsBtn" title="아바타 설정">📷</button>
+    </div>
+  </div>
+
+  <!-- pet box -->
+  <div class="pet-box" id="petBox">
+    <div class="no-avatar-msg" id="noAvatarMsg">📷 사진 버튼을 눌러<br>아바타를 설정해주세요</div>
+
+    <!-- shower scene (always present, hidden off-screen) -->
+    <div class="shower-scene" id="showerScene">
+      <img class="shower-bg-img" id="showerBgImg" src="" alt="샤워기">
+      <img class="shower-curtain-img open" id="showerCurtainImg" src="" alt="커튼">
+    </div>
+
+    <!-- sparkle burst layer -->
+    <div class="sparkle-burst" id="sparkleBurst"></div>
+  </div>
+
+  <!-- action bar (below box, right side) -->
+  <div class="action-bar">
+    <button class="action-btn" id="btnSleep" title="재우기">
+      <span class="btn-fallback" id="fbSleep">🛏️</span>
+    </button>
+    <button class="action-btn" id="btnEat" title="먹이기">
+      <span class="btn-fallback" id="fbEat">🍖</span>
+    </button>
+    <button class="action-btn" id="btnWash" title="씻기기">
+      <span class="btn-fallback" id="fbWash">🛁</span>
+    </button>
+  </div>
+</div>
+
+<!-- ============================================================
+  SETTINGS POPUP
+  ============================================================ -->
+<div class="popup-overlay hidden" id="settingsPopup">
+  <div class="popup-panel">
+    <h2>🐾 아바타 설정</h2>
+    <button class="close-btn" id="closeSettingsBtn">✕</button>
+
+    <div class="name-input-wrap">
+      <label>이름</label>
+      <input type="text" class="name-input" id="nameInput" placeholder="아바타 이름을 입력하세요" maxlength="12">
+    </div>
+
+    <div class="img-slots">
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotNormal" data-type="normal">
+          <span class="plus-icon">＋</span>
+          <img id="previewNormal" alt="일반">
+          <div class="edit-overlay">✏️ 편집</div>
+        </div>
+        <label>😐 일반</label>
+        <input type="file" class="file-input" id="fileNormal" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotCry" data-type="cry">
+          <span class="plus-icon">＋</span>
+          <img id="previewCry" alt="우는">
+          <div class="edit-overlay">✏️ 편집</div>
+        </div>
+        <label>😢 우는</label>
+        <input type="file" class="file-input" id="fileCry" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotAngry" data-type="angry">
+          <span class="plus-icon">＋</span>
+          <img id="previewAngry" alt="화나는">
+          <div class="edit-overlay">✏️ 편집</div>
+        </div>
+        <label>😠 화남</label>
+        <input type="file" class="file-input" id="fileAngry" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotHappy" data-type="happy">
+          <span class="plus-icon">＋</span>
+          <img id="previewHappy" alt="웃는">
+          <div class="edit-overlay">✏️ 편집</div>
+        </div>
+        <label>😄 웃음</label>
+        <input type="file" class="file-input" id="fileHappy" accept="image/*">
+      </div>
+    </div>
+
+    <button class="apply-btn" id="applyBtn">✅ 적용하기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+  CROPPER POPUP
+  ============================================================ -->
+<div class="cropper-overlay hidden" id="cropperOverlay">
+  <div class="cropper-panel">
+    <h3>✂️ 이미지 편집</h3>
+    <div class="cropper-canvas-wrap">
+      <img id="cropperImg" src="" alt="crop">
+    </div>
+    <div class="cropper-tools">
+      <button class="crop-tool-btn" id="cropRotateLeft">↺ 회전</button>
+      <button class="crop-tool-btn" id="cropRotateRight">↻ 회전</button>
+      <button class="crop-tool-btn" id="cropFlipH">↔ 좌우반전</button>
+      <button class="crop-tool-btn" id="cropZoomIn">＋ 확대</button>
+      <button class="crop-tool-btn" id="cropZoomOut">－ 축소</button>
+      <button class="crop-tool-btn cancel" id="cropCancel">취소</button>
+      <button class="crop-tool-btn primary" id="cropConfirm">적용 ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  JAVASCRIPT
+  ============================================================ -->
+<script>
+/* ─────────────────────────────────────────────
+   CONSTANTS
+──────────────────────────────────────────────── */
+const STORAGE_KEY = 'petAppData_v3';
+const BOX_W = 380, BOX_H = 280;
+const AVATAR_W = 80, AVATAR_H = 80;
+const FLOOR_Y = 30;
+
+/* ─────────────────────────────────────────────
+   STATE
+──────────────────────────────────────────────── */
+let petData = {
+  name: '',
+  images: { normal:null, cry:null, angry:null, happy:null },
+  stats: { hunger:80, sleep:70, love:85, clean:75 },
+  firstSetupDone: false
+};
+
+let avatarWrap = null, avatarImgEl = null;
+let currentExpression = 'normal';
+let isActionLocked = false; // prevents overlapping actions
+
+/* physics */
+let petX = 100, petVX = 0.7;
+let petY = FLOOR_Y, petVY = 0;
+let isFalling = false, isDragging = false;
+const gravity = 0.55;
+
+/* timers */
+let petRunTimer = 0, petJumpTimer = 0, petWobbleTimer = 0;
+let animRAF = null;
+
+/* drag */
+let dragVX = 0, dragVY = 0, lastDragX = 0, lastDragY = 0, dragActive = false;
+
+/* tap */
+let lastTapTime = 0, tapCount = 0;
+
+/* ─────────────────────────────────────────────
+   PERSIST
+──────────────────────────────────────────────── */
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(petData)); } catch(e) {}
+}
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) petData = { ...petData, ...JSON.parse(raw) };
+  } catch(e) {}
+}
+
+/* ─────────────────────────────────────────────
+   DOM REFS
+──────────────────────────────────────────────── */
+const petBox          = document.getElementById('petBox');
+const petNameLabel    = document.getElementById('petNameLabel');
+const noAvatarMsg     = document.getElementById('noAvatarMsg');
+const settingsPopup   = document.getElementById('settingsPopup');
+const nameInput       = document.getElementById('nameInput');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+const closeSettingsBtn= document.getElementById('closeSettingsBtn');
+const applyBtn        = document.getElementById('applyBtn');
+const sleepOverlay    = document.getElementById('sleepOverlay');
+const sleepImg        = document.getElementById('sleepImg');
+const showerScene     = document.getElementById('showerScene');
+const showerBgImg     = document.getElementById('showerBgImg');
+const showerCurtainImg= document.getElementById('showerCurtainImg');
+const sparkleBurst    = document.getElementById('sparkleBurst');
+const cropperOverlay  = document.getElementById('cropperOverlay');
+const cropperImg      = document.getElementById('cropperImg');
+
+const statBarEls = {
+  hunger: document.getElementById('barHunger'),
+  sleep:  document.getElementById('barSleep'),
+  love:   document.getElementById('barLove'),
+  clean:  document.getElementById('barClean'),
+};
+
+/* ─────────────────────────────────────────────
+   INIT GAME ASSETS
+──────────────────────────────────────────────── */
+function initAssets() {
+  /* Action button icons — try img, fall back to emoji */
+  function tryIcon(btnId, fallbackId, src) {
+    const btn = document.getElementById(btnId);
+    const fb  = document.getElementById(fallbackId);
+    if (!src) return;
+    const img = document.createElement('img');
+    img.onload = () => { fb.style.display='none'; btn.insertBefore(img, fb); };
+    img.onerror = () => {};
+    img.src = src;
+  }
+  tryIcon('btnSleep', 'fbSleep', GAME_ASSETS.sleepBtnIcon);
+  tryIcon('btnEat',   'fbEat',   GAME_ASSETS.eatBtnIcon);
+  tryIcon('btnWash',  'fbWash',  GAME_ASSETS.washBtnIcon);
+
+  /* Sleep overlay image */
+  if (GAME_ASSETS.sleepImage) sleepImg.src = GAME_ASSETS.sleepImage;
+
+  /* Shower props */
+  if (GAME_ASSETS.showerBg)      showerBgImg.src      = GAME_ASSETS.showerBg;
+  if (GAME_ASSETS.showerCurtain) showerCurtainImg.src = GAME_ASSETS.showerCurtain;
+}
+
+/* ─────────────────────────────────────────────
+   BOOTSTRAP
+──────────────────────────────────────────────── */
+loadData();
+initAssets();
+applyStatBars();
+applyNameLabel();
+
+if (petData.images.normal) {
+  populateSettingsFromData();
+  spawnAvatar();
+}
+
+if (!petData.firstSetupDone) {
+  openSettings(true);
+}
+
+/* stat decay */
+setInterval(() => {
+  if (!petData.images.normal) return;
+  petData.stats.hunger = Math.max(0, petData.stats.hunger - 0.5);
+  petData.stats.sleep  = Math.max(0, petData.stats.sleep  - 0.3);
+  petData.stats.love   = Math.max(0, petData.stats.love   - 0.4);
+  petData.stats.clean  = Math.max(0, petData.stats.clean  - 0.35);
+  applyStatBars();
+  updateExpression();
+  saveData();
+}, 3000);
+
+/* ─────────────────────────────────────────────
+   STATS
+──────────────────────────────────────────────── */
+function applyStatBars() {
+  Object.keys(statBarEls).forEach(k => {
+    const v = petData.stats[k];
+    const el = statBarEls[k];
+    el.style.width = v + '%';
+    el.className = 'stat-bar-fill ' + (v < 30 ? 'low' : v < 60 ? 'mid' : 'high');
+  });
+}
+
+function updateExpression() {
+  const min = Math.min(...Object.values(petData.stats));
+  let target = 'normal';
+  if (min < 15)      target = 'angry';
+  else if (min < 30) target = 'cry';
+  else if (min > 75) target = 'happy';
+
+  if (target !== currentExpression) {
+    currentExpression = target;
+    refreshAvatarImg();
+    petBox.classList.toggle('sad-glow',   target === 'cry');
+    petBox.classList.toggle('angry-glow', target === 'angry');
+  }
+}
+
+/* stat click (quick restore) */
+document.querySelectorAll('.stat-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const stat = item.dataset.stat;
+    petData.stats[stat] = Math.min(100, petData.stats[stat] + 18);
+    applyStatBars(); updateExpression(); saveData();
+    const rect = item.getBoundingClientRect();
+    showTooltip(`+18 ${item.dataset.label}`, rect.left, rect.bottom + 6);
+  });
+});
+
+function showTooltip(text, x, y) {
+  const el = document.getElementById('statTooltip');
+  el.textContent = text;
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1300);
+}
+
+/* ─────────────────────────────────────────────
+   SETTINGS POPUP
+──────────────────────────────────────────────── */
+let sessionImgs = {};
+let cropperInstance = null;
+let currentCropType = null;
+
+openSettingsBtn.addEventListener('click', () => openSettings(false));
+closeSettingsBtn.addEventListener('click', closeSettings);
+
+function openSettings(isFirst) {
+  sessionImgs = { ...petData.images };
+  nameInput.value = petData.name || '';
+  populateSettingsFromData();
+  settingsPopup.classList.remove('hidden');
+  closeSettingsBtn.style.display = isFirst ? 'none' : '';
+}
+function closeSettings() { settingsPopup.classList.add('hidden'); }
+
+const slotIds    = { normal:'slotNormal',   cry:'slotCry',   angry:'slotAngry',   happy:'slotHappy'   };
+const previewIds = { normal:'previewNormal', cry:'previewCry', angry:'previewAngry', happy:'previewHappy' };
+const fileIds    = { normal:'fileNormal',    cry:'fileCry',   angry:'fileAngry',   happy:'fileHappy'   };
+
+Object.keys(fileIds).forEach(type => {
+  const slotEl = document.getElementById(slotIds[type]);
+  const fileEl = document.getElementById(fileIds[type]);
+  slotEl.addEventListener('click', () => fileEl.click());
+  fileEl.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => openCropper(type, ev.target.result);
+    reader.readAsDataURL(file);
+    fileEl.value = '';
+  });
+});
+
+applyBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); nameInput.style.borderColor='#e05252'; return; }
+  nameInput.style.borderColor = '';
+  petData.name = name;
+  petData.images = { ...petData.images, ...sessionImgs };
+  petData.firstSetupDone = true;
+  saveData();
+  applyNameLabel();
+  spawnAvatar();
+  closeSettings();
+});
+
+function populateSettingsFromData() {
+  Object.keys(previewIds).forEach(type => {
+    const src = (sessionImgs && sessionImgs[type]) || petData.images[type];
+    const pEl = document.getElementById(previewIds[type]);
+    const sEl = document.getElementById(slotIds[type]);
+    if (src) { pEl.src=src; pEl.classList.add('loaded'); sEl.classList.add('has-img'); }
+    else     { pEl.src=''; pEl.classList.remove('loaded'); sEl.classList.remove('has-img'); }
+  });
+}
+
+function applyNameLabel() {
+  if (petData.name) {
+    petNameLabel.textContent = petData.name;
+    petNameLabel.classList.remove('empty');
+  } else {
+    petNameLabel.textContent = '이름 없음';
+    petNameLabel.classList.add('empty');
+  }
+}
+
+/* ─────────────────────────────────────────────
+   CROPPER
+──────────────────────────────────────────────── */
+function openCropper(type, src) {
+  currentCropType = type;
+  cropperImg.src = src;
+  cropperOverlay.classList.remove('hidden');
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  cropperImg.onload = () => {
+    cropperInstance = new Cropper(cropperImg, {
+      aspectRatio: NaN, viewMode: 1, autoCropArea: 0.85,
+      background: false, responsive: true, movable: true, zoomable: true, rotatable: true,
+    });
+  };
+}
+
+document.getElementById('cropRotateLeft') .addEventListener('click', () => cropperInstance?.rotate(-90));
+document.getElementById('cropRotateRight').addEventListener('click', () => cropperInstance?.rotate(90));
+document.getElementById('cropFlipH')      .addEventListener('click', () => {
+  if (!cropperInstance) return;
+  cropperInstance.scaleX(cropperInstance.getData().scaleX === -1 ? 1 : -1);
+});
+document.getElementById('cropZoomIn') .addEventListener('click', () => cropperInstance?.zoom(0.1));
+document.getElementById('cropZoomOut').addEventListener('click', () => cropperInstance?.zoom(-0.1));
+
+document.getElementById('cropCancel').addEventListener('click', () => {
+  cropperOverlay.classList.add('hidden');
+  cropperInstance?.destroy(); cropperInstance = null; currentCropType = null;
+});
+
+document.getElementById('cropConfirm').addEventListener('click', () => {
+  if (!cropperInstance || !currentCropType) return;
+  const canvas = cropperInstance.getCroppedCanvas({ fillColor:'transparent', imageSmoothingQuality:'high' });
+  const b64 = canvas.toDataURL('image/png');
+  sessionImgs[currentCropType] = b64;
+  const pEl = document.getElementById(previewIds[currentCropType]);
+  const sEl = document.getElementById(slotIds[currentCropType]);
+  pEl.src = b64; pEl.classList.add('loaded'); sEl.classList.add('has-img');
+  cropperInstance.destroy(); cropperInstance = null;
+  cropperOverlay.classList.add('hidden'); currentCropType = null;
+});
+
+/* ─────────────────────────────────────────────
+   AVATAR SPAWN
+──────────────────────────────────────────────── */
+function spawnAvatar() {
+  if (!petData.images.normal) return;
+  avatarWrap?.remove();
+  noAvatarMsg.style.display = 'none';
+
+  avatarWrap = document.createElement('div');
+  avatarWrap.className = 'avatar-wrap walking';
+
+  avatarImgEl = document.createElement('img');
+  avatarImgEl.className = 'avatar-img';
+  avatarImgEl.draggable = false;
+  avatarWrap.appendChild(avatarImgEl);
+  petBox.appendChild(avatarWrap);
+
+  petX = 100; petVX = 0.7; petY = FLOOR_Y; petVY = 0; isFalling = false;
+
+  refreshAvatarImg();
+  startAnimation();
+  setupInteractions();
+  updateExpression();
+}
+
+function refreshAvatarImg() {
+  if (!avatarImgEl) return;
+  const src = petData.images[currentExpression] || petData.images.normal;
+  if (src) avatarImgEl.src = src;
+}
+
+/* ─────────────────────────────────────────────
+   ANIMATION LOOP
+──────────────────────────────────────────────── */
+function startAnimation() {
+  if (animRAF) cancelAnimationFrame(animRAF);
+  let last = performance.now();
+
+  function loop(now) {
+    const dt = Math.min((now - last) / 16, 3);
+    last = now;
+
+    if (!isDragging && !isActionLocked) {
+      if (isFalling) {
+        petVY -= gravity * dt;
+        petY  += petVY * dt;
+        if (petY <= FLOOR_Y) {
+          petY = FLOOR_Y; petVY = 0; isFalling = false;
+          petData.stats.clean = Math.max(0, petData.stats.clean - 3);
+          applyStatBars();
+          triggerAnim('wobbling', 450);
+        }
+      } else {
+        petX += petVX * dt;
+        if (petX > BOX_W - AVATAR_W - 8) { petX = BOX_W - AVATAR_W - 8; petVX = -Math.abs(petVX); avatarWrap?.classList.add('flipped'); }
+        if (petX < 8)                     { petX = 8;                     petVX =  Math.abs(petVX); avatarWrap?.classList.remove('flipped'); }
+
+        petRunTimer -= dt;
+        if (petRunTimer <= 0) {
+          const dir = petVX > 0 ? 1 : -1;
+          petVX = dir * (Math.random() < 0.3 ? 2.3 : 0.75);
+          petRunTimer = 70 + Math.random() * 110;
+        }
+        petWobbleTimer -= dt;
+        if (petWobbleTimer <= 0) { triggerAnim('wobbling', 450); petWobbleTimer = 100 + Math.random() * 140; }
+        petJumpTimer -= dt;
+        if (petJumpTimer <= 0) { triggerAnim('jumping', 500); petJumpTimer = 130 + Math.random() * 180; }
+      }
+    }
+
+    if (avatarWrap) {
+      avatarWrap.style.left   = petX + 'px';
+      avatarWrap.style.bottom = petY + 'px';
+    }
+    animRAF = requestAnimationFrame(loop);
+  }
+  animRAF = requestAnimationFrame(loop);
+}
+
+function triggerAnim(cls, duration) {
+  if (!avatarWrap) return;
+  avatarWrap.classList.remove(cls);
+  void avatarWrap.offsetWidth;
+  avatarWrap.classList.add(cls);
+  setTimeout(() => avatarWrap?.classList.remove(cls), duration);
+}
+
+/* ─────────────────────────────────────────────
+   INTERACTIONS
+──────────────────────────────────────────────── */
+function setupInteractions() {
+  /* double-tap to pet */
+  avatarWrap.addEventListener('click', e => {
+    if (isDragging || isActionLocked) return;
+    const now = Date.now();
+    tapCount = (now - lastTapTime < 350) ? tapCount + 1 : 1;
+    lastTapTime = now;
+    if (tapCount >= 2) { tapCount = 0; onPet(); }
+  });
+
+  /* drag to throw */
+  function getPos(e) {
+    return e.touches ? { x: e.touches[0].clientX, y: e.touches[0].clientY }
+                     : { x: e.clientX, y: e.clientY };
+  }
+  function onDragStart(e) {
+    if (isActionLocked) return;
+    e.preventDefault();
+    isDragging = dragActive = true;
+    isFalling = false; petVY = 0;
+    const p = getPos(e);
+    lastDragX = p.x; lastDragY = p.y; dragVX = 0; dragVY = 0;
+  }
+  function onDragMove(e) {
+    if (!dragActive) return;
+    e.preventDefault();
+    const p = getPos(e);
+    dragVX = p.x - lastDragX; dragVY = p.y - lastDragY;
+    lastDragX = p.x; lastDragY = p.y;
+    const rect = petBox.getBoundingClientRect();
+    petX = Math.max(0, Math.min(BOX_W - AVATAR_W, p.x - rect.left - AVATAR_W/2));
+    petY = Math.max(0, Math.min(BOX_H - AVATAR_H, rect.bottom - p.y - AVATAR_H/2));
+  }
+  function onDragEnd() {
+    if (!dragActive) return;
+    dragActive = false; isDragging = false;
+    if (dragVY < -3) { isFalling = true; petVY = Math.abs(dragVY)*1.4; petVX = dragVX*0.4 || petVX; }
+  }
+  avatarWrap.addEventListener('mousedown',  onDragStart);
+  avatarWrap.addEventListener('touchstart', onDragStart, { passive:false });
+  document.addEventListener('mousemove',    onDragMove);
+  document.addEventListener('touchmove',    onDragMove,  { passive:false });
+  document.addEventListener('mouseup',      onDragEnd);
+  document.addEventListener('touchend',     onDragEnd);
+}
+
+function onPet() {
+  const heart = document.createElement('div');
+  heart.className = 'heart-pop'; heart.textContent = '💗';
+  avatarWrap.appendChild(heart);
+  setTimeout(() => heart.remove(), 750);
+
+  const prev = currentExpression;
+  if (currentExpression === 'normal' || currentExpression === 'happy') {
+    currentExpression = 'happy';
+    refreshAvatarImg();
+    setTimeout(() => { currentExpression = prev; refreshAvatarImg(); }, 1500);
+  }
+  petData.stats.love = Math.min(100, petData.stats.love + 8);
+  applyStatBars(); updateExpression(); saveData();
+}
+
+/* ─────────────────────────────────────────────
+   ACTION: SLEEP
+──────────────────────────────────────────────── */
+document.getElementById('btnSleep').addEventListener('click', () => {
+  if (isActionLocked || !petData.images.normal) return;
+  isActionLocked = true;
+  lockActionBtns(true);
+
+  sleepOverlay.classList.add('show');
+
+  setTimeout(() => {
+    sleepOverlay.classList.remove('show');
+    setTimeout(() => {
+      petData.stats.sleep = Math.min(100, petData.stats.sleep + 45);
+      applyStatBars(); updateExpression(); saveData();
+      isActionLocked = false;
+      lockActionBtns(false);
+    }, 600);
+  }, 3200);
+});
+
+/* ─────────────────────────────────────────────
+   ACTION: EAT
+──────────────────────────────────────────────── */
+document.getElementById('btnEat').addEventListener('click', () => {
+  if (isActionLocked || !petData.images.normal) return;
+  isActionLocked = true;
+  lockActionBtns(true);
+  dropFood();
+});
+
+function dropFood() {
+  const foodEl = document.createElement('div');
+  foodEl.className = 'food-item';
+
+  /* food image or fallback emoji */
+  if (GAME_ASSETS.foodImage) {
+    const fi = document.createElement('img');
+    fi.src = GAME_ASSETS.foodImage;
+    foodEl.appendChild(fi);
+  } else {
+    foodEl.textContent = '🍖';
+    foodEl.style.fontSize = '2rem';
+    foodEl.style.lineHeight = '48px';
+    foodEl.style.textAlign = 'center';
+  }
+
+  /* drop from above avatar horizontally */
+  const startX = petX + AVATAR_W/2 - 24;
+  const startY = BOX_H - 20;
+  foodEl.style.left   = startX + 'px';
+  foodEl.style.bottom = startY + 'px';
+  petBox.appendChild(foodEl);
+
+  let foodY  = startY;
+  let foodVY = -3.5;
+  let hitDetected = false;
+
+  function foodLoop() {
+    if (hitDetected) return;
+    foodVY -= gravity * 0.9;
+    foodY  += foodVY;
+
+    /* collision: food near avatar */
+    const fCenterX = parseFloat(foodEl.style.left) + 24;
+    const fCenterY = BOX_H - foodY;
+    const aCenterX = petX + AVATAR_W/2;
+    const aCenterY = BOX_H - (petY + AVATAR_H/2);
+    const dist = Math.hypot(fCenterX - aCenterX, fCenterY - aCenterY);
+
+    if (dist < 55 || foodY <= FLOOR_Y - 10) {
+      hitDetected = true;
+      foodEl.remove();
+      onEat();
+      return;
+    }
+    foodEl.style.bottom = foodY + 'px';
+    requestAnimationFrame(foodLoop);
+  }
+  requestAnimationFrame(foodLoop);
+}
+
+function onEat() {
+  /* swap to eating image */
+  const eatSrc = GAME_ASSETS.eatImage;
+  if (eatSrc && avatarImgEl) {
+    const prevSrc = avatarImgEl.src;
+    avatarImgEl.src = eatSrc;
+    setTimeout(() => {
+      if (avatarImgEl) avatarImgEl.src = prevSrc;
+      finishEat();
+    }, 1600);
+  } else {
+    triggerAnim('wobbling', 500);
+    setTimeout(finishEat, 600);
+  }
+}
+
+function finishEat() {
+  petData.stats.hunger = Math.min(100, petData.stats.hunger + 40);
+  applyStatBars(); updateExpression(); saveData();
+  isActionLocked = false;
+  lockActionBtns(false);
+}
+
+/* ─────────────────────────────────────────────
+   ACTION: WASH
+──────────────────────────────────────────────── */
+document.getElementById('btnWash').addEventListener('click', () => {
+  if (isActionLocked || !petData.images.normal) return;
+  isActionLocked = true;
+  lockActionBtns(true);
+
+  /* 1. Slide shower scene in */
+  showerScene.classList.add('visible');
+  showerCurtainImg.classList.remove('closed');
+  showerCurtainImg.classList.add('open');
+
+  /* 2. Move avatar to shower (slide left) */
+  const origX = petX;
+  avatarWrap.classList.remove('walking');
+  const targetX = 20;
+
+  let walkX = petX;
+  const walkDir = targetX < petX ? -1 : 1;
+  avatarWrap.classList.toggle('flipped', walkDir > 0);
+
+  function walkToShower() {
+    walkX += walkDir * 3;
+    petX = walkX;
+    if ((walkDir < 0 && walkX <= targetX) || (walkDir > 0 && walkX >= targetX)) {
+      petX = targetX;
+      avatarWrap.style.left = petX + 'px';
+      setTimeout(closeCurtain, 200);
+      return;
+    }
+    avatarWrap.style.left = petX + 'px';
+    requestAnimationFrame(walkToShower);
+  }
+  requestAnimationFrame(walkToShower);
+
+  /* 3. Close curtain over avatar */
+  function closeCurtain() {
+    showerCurtainImg.classList.remove('open');
+    showerCurtainImg.classList.add('closed');
+    if (avatarWrap) avatarWrap.style.opacity = '0';
+
+    /* 4. After 1.5s, sparkle burst */
+    setTimeout(() => {
+      showSparkles();
+      /* 5. After sparkle, open curtain, restore avatar */
+      setTimeout(() => {
+        showerCurtainImg.classList.remove('closed');
+        showerCurtainImg.classList.add('open');
+        if (avatarWrap) { avatarWrap.style.opacity = '1'; }
+        petX = origX;
+        avatarWrap.classList.add('walking');
+        avatarWrap.classList.remove('flipped');
+
+        /* 6. Slide shower out */
+        setTimeout(() => {
+          showerScene.classList.remove('visible');
+          petData.stats.clean = Math.min(100, petData.stats.clean + 50);
+          applyStatBars(); updateExpression(); saveData();
+          isActionLocked = false;
+          lockActionBtns(false);
+        }, 500);
+      }, 900);
+    }, 1400);
+  }
+});
+
+function showSparkles() {
+  sparkleBurst.innerHTML = '';
+  const emojis = ['✨','💧','⭐','🌟','💦','✨'];
+  const positions = [
+    {tx:'-40px', ty:'-50px'}, {tx:'40px', ty:'-55px'}, {tx:'60px', ty:'-20px'},
+    {tx:'-55px', ty:'-20px'}, {tx:'10px', ty:'-65px'},  {tx:'-20px',ty:'-35px'},
+  ];
+  emojis.forEach((em, i) => {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    s.textContent = em;
+    s.style.setProperty('--tx', positions[i].tx);
+    s.style.setProperty('--ty', positions[i].ty);
+    s.style.left = (50 + (Math.random()-0.5)*40) + '%';
+    s.style.top  = (50 + (Math.random()-0.5)*40) + '%';
+    s.style.animationDelay = (i * 0.06) + 's';
+    sparkleBurst.appendChild(s);
+  });
+  sparkleBurst.classList.add('show');
+  setTimeout(() => { sparkleBurst.classList.remove('show'); sparkleBurst.innerHTML = ''; }, 900);
+}
+
+/* ─────────────────────────────────────────────
+   UTILS
+──────────────────────────────────────────────── */
+function lockActionBtns(lock) {
+  ['btnSleep','btnEat','btnWash'].forEach(id => {
+    document.getElementById(id).disabled = lock;
+  });
+}
+</script>
+</body>
+</html>

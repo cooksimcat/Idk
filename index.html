@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>나의 아바타</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="config.js"></script>
+
+<style>
+/* ============================================================
+   CSS 변수 — config.js 의 theme 으로 덮어씌워짐
+   ============================================================ */
+:root {
+  --bg:          #fdf6ee;
+  --box-bg:      #fff9f3;
+  --box-border:  #e8c9a0;
+  --accent:      #f4845f;
+  --accent2:     #7ec8c8;
+  --text:        #3a2e26;
+  --muted:       #b89a7a;
+  --floor-grad:  #f5e4cc;
+  --shadow:      rgba(90,60,30,0.10);
+  --box-w:       380px;
+  --box-h:       280px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background-image:
+    radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 12%, transparent) 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--accent2) 12%, transparent) 0%, transparent 55%);
+}
+
+/* ============================================================
+   SCENE
+   ============================================================ */
+.scene {
+  position: relative;
+  width: var(--box-w);
+}
+
+.scene-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.pet-name-label {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.5rem;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  min-width: 60px;
+}
+.pet-name-label.empty {
+  color: var(--muted);
+  font-size: 1rem;
+  font-family: 'Gowun Dodum', sans-serif;
+}
+
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  position: relative;
+}
+.stat-icon { font-size: 1.1rem; line-height:1; }
+.stat-bar-wrap {
+  width: 36px;
+  height: 6px;
+  background: var(--box-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s, background 0.5s;
+}
+.stat-bar-fill.low  { background: #e05252; }
+.stat-bar-fill.mid  { background: #f4c05f; }
+.stat-bar-fill.high { background: var(--accent2); }
+
+.photo-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, filter 0.15s;
+  flex-shrink: 0;
+}
+.photo-btn:hover { transform: scale(1.1); filter: brightness(0.88); }
+
+/* ============================================================
+   PET BOX
+   ============================================================ */
+.pet-box {
+  width: var(--box-w);
+  height: var(--box-h);
+  background-color: var(--box-bg);
+  /* 배경이미지는 JS에서 설정 */
+  background-size: cover;
+  background-position: center;
+  border: 2.5px solid var(--box-border);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  transition: box-shadow 0.6s;
+}
+/* border-image는 JS로 설정 */
+
+/* Floor gradient (only when no bg image) */
+.pet-box .floor-layer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40px;
+  background: linear-gradient(to top, var(--floor-grad), transparent);
+  border-radius: 0 0 22px 22px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.no-avatar-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.8;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ============================================================
+   ACTION BUTTONS (box 아래 오른쪽)
+   ============================================================ */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  padding-right: 4px;
+}
+.action-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  border: 2px solid var(--box-border);
+  background: var(--box-bg);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, filter 0.15s;
+  padding: 4px;
+  overflow: hidden;
+}
+.action-btn:hover { transform: translateY(-2px) scale(1.06); }
+.action-btn:active { transform: scale(0.95); }
+.action-btn.disabled { opacity: 0.4; pointer-events: none; }
+.action-btn img.btn-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+.action-btn .btn-emoji { font-size: 1.4rem; line-height: 1; }
+.action-btn .btn-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   AVATAR
+   ============================================================ */
+.avatar-wrap {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  will-change: transform, left, bottom;
+  z-index: 5;
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.avatar-wrap.flipped .avatar-img { transform: scaleX(-1); }
+
+.heart-pop {
+  position: absolute;
+  top: -28px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  opacity: 0;
+  pointer-events: none;
+  animation: heartPop 0.7s ease forwards;
+  z-index: 10;
+}
+@keyframes heartPop {
+  0%   { opacity:0; transform: translateX(-50%) scale(0.5) translateY(0); }
+  30%  { opacity:1; transform: translateX(-50%) scale(1.3) translateY(-8px); }
+  70%  { opacity:1; transform: translateX(-50%) scale(1) translateY(-14px); }
+  100% { opacity:0; transform: translateX(-50%) scale(0.8) translateY(-22px); }
+}
+
+@keyframes idleWobble {
+  0%,100% { transform: rotate(0deg); }
+  25%     { transform: rotate(-2deg); }
+  75%     { transform: rotate(2deg); }
+}
+@keyframes jumpAnim {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-22px); }
+}
+.avatar-wrap.wobble .avatar-img { animation: idleWobble 0.4s ease-in-out; }
+.avatar-wrap.jump              { animation: jumpAnim 0.4s ease; }
+
+/* ============================================================
+   SLEEP SCENE
+   ============================================================ */
+.sleep-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 20, 0);
+  border-radius: 22px;
+  z-index: 20;
+  pointer-events: none;
+  transition: background 0.7s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sleep-overlay.dark { background: rgba(10, 8, 20, 0.82); }
+
+.sleep-scene-img {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.sleep-overlay.dark .sleep-scene-img {
+  opacity: 1;
+  transform: scale(1);
+}
+.sleep-zzz-wrap {
+  position: absolute;
+  top: 30%; left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.5s;
+  pointer-events: none;
+}
+.sleep-overlay.dark .sleep-zzz-wrap { opacity: 1; }
+.zzz-bubble {
+  font-family: 'Jua', sans-serif;
+  color: #b8d4f8;
+  animation: zzzFloat 1.6s ease-in-out infinite;
+}
+.zzz-bubble:nth-child(1) { font-size:0.9rem; animation-delay:0s; }
+.zzz-bubble:nth-child(2) { font-size:1.1rem; animation-delay:0.4s; margin-left:8px; }
+.zzz-bubble:nth-child(3) { font-size:1.3rem; animation-delay:0.8s; margin-left:16px; }
+@keyframes zzzFloat {
+  0%   { opacity:0.3; transform: translateY(0); }
+  50%  { opacity:1;   transform: translateY(-10px); }
+  100% { opacity:0;   transform: translateY(-20px); }
+}
+
+/* ============================================================
+   EAT SCENE — food drop
+   ============================================================ */
+.food-item {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  z-index: 15;
+  pointer-events: none;
+  will-change: top;
+}
+.food-item img, .food-item .food-emoji {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  font-size: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   WASH SCENE
+   ============================================================ */
+.wash-stage {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  z-index: 18;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.wash-stage.visible { opacity: 1; }
+
+.wash-shower-img, .wash-curtain-img {
+  position: absolute;
+  bottom: 0;
+  object-fit: contain;
+  image-rendering: auto;
+}
+/* shower: left side */
+.wash-shower-wrap {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 130px;
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+}
+.wash-shower-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* curtain: slides in from left */
+.wash-curtain-wrap {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 130px;
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  transform: translateX(-140px);
+  transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+}
+.wash-curtain-wrap.closed { transform: translateX(0); }
+.wash-curtain-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* sparks */
+.spark-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.spark {
+  position: absolute;
+  font-size: 1.2rem;
+  opacity: 0;
+  animation: sparkAnim 0.6s ease forwards;
+}
+@keyframes sparkAnim {
+  0%   { opacity:0; transform: scale(0.5) rotate(0deg); }
+  40%  { opacity:1; transform: scale(1.3) rotate(20deg); }
+  100% { opacity:0; transform: scale(0.8) rotate(40deg) translateY(-16px); }
+}
+
+/* Overlay emoji fallbacks */
+.shower-emoji-wrap {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 130px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 2.8rem;
+}
+.curtain-emoji-wrap {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  width: 130px;
+  height: 160px;
+  background: rgba(180,220,255,0.25);
+  border: 2px solid rgba(130,180,255,0.4);
+  border-radius: 12px 12px 0 0;
+  transform: translateX(-140px);
+  transition: transform 0.55s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  backdrop-filter: blur(3px);
+}
+.curtain-emoji-wrap.closed { transform: translateX(0); }
+
+/* ============================================================
+   SETTINGS POPUP
+   ============================================================ */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(58,46,38,0.5);
+  backdrop-filter: blur(5px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.popup-overlay.hidden { display: none; }
+
+.popup-panel {
+  background: var(--bg);
+  border: 2px solid var(--box-border);
+  border-radius: 22px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(90,60,30,0.2);
+  position: relative;
+}
+.popup-panel h2 {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+.popup-close {
+  position: absolute;
+  top: 16px; right: 18px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+}
+.popup-close:hover { color: var(--text); }
+
+.form-label {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.name-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--box-border);
+  border-radius: 10px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 1rem;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  margin-bottom: 20px;
+}
+.name-input:focus { border-color: var(--accent); }
+
+.img-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.img-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+.img-slot-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.img-preview-wrap {
+  width: 90px;
+  height: 90px;
+  border: 1.5px dashed var(--box-border);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.img-preview-wrap:hover { border-color: var(--accent); }
+.img-preview-wrap .plus-icon { font-size: 1.8rem; color: var(--muted); }
+.img-preview-wrap.has-img .plus-icon { display: none; }
+.img-preview-wrap img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: none;
+}
+.img-preview-wrap img.loaded { display: block; }
+.img-preview-wrap .edit-over {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.38);
+  color: #fff;
+  font-size: 0.72rem;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+  border-radius: 10px;
+}
+.img-preview-wrap:hover .edit-over { opacity: 1; }
+.file-input { display: none; }
+
+.section-title {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 10px;
+  font-family: 'Jua', sans-serif;
+}
+
+/* Action scene slots in settings */
+.scene-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.scene-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.scene-slot-inner {
+  width: 70px;
+  height: 70px;
+  border: 1.5px dashed var(--box-border);
+  border-radius: 10px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.scene-slot-inner:hover { border-color: var(--accent); }
+.scene-slot-inner .plus-icon { font-size: 1.4rem; color: var(--muted); }
+.scene-slot-inner.has-img .plus-icon { display: none; }
+.scene-slot-inner img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: none;
+}
+.scene-slot-inner img.loaded { display: block; }
+.scene-slot-inner .edit-over {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.38);
+  color: #fff; font-size: 0.68rem;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+  border-radius: 8px;
+}
+.scene-slot-inner:hover .edit-over { opacity: 1; }
+.scene-slot-label { font-size: 0.7rem; color: var(--muted); text-align: center; }
+
+.apply-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+.apply-btn:hover { filter: brightness(0.88); transform: translateY(-1px); }
+.apply-btn:active { transform: translateY(0); }
+
+/* ============================================================
+   CROPPER POPUP
+   ============================================================ */
+.cropper-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20,14,8,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.cropper-overlay.hidden { display: none; }
+.cropper-panel {
+  background: #2a2018;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.cropper-panel h3 { font-family: 'Jua', sans-serif; color: #fff; font-size: 1rem; }
+.cropper-canvas-wrap {
+  width: 100%;
+  height: 300px;
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cropper-canvas-wrap img { display: block; max-width: 100%; }
+.cropper-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.ctool {
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: 'Gowun Dodum', sans-serif;
+}
+.ctool:hover { background: rgba(255,255,255,0.2); }
+.ctool.primary { background: var(--accent); border-color: var(--accent); margin-left: auto; }
+.ctool.cancel  { color: #999; }
+
+/* Tooltip */
+.stat-tooltip {
+  position: fixed;
+  background: rgba(58,46,38,0.9);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 300;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.stat-tooltip.show { opacity: 1; }
+
+/* box glow states */
+.pet-box.sad-glow   { box-shadow: 0 8px 32px rgba(80,120,255,0.22), 0 2px 8px var(--shadow); }
+.pet-box.angry-glow { box-shadow: 0 8px 32px rgba(255,80,80,0.28), 0 2px 8px var(--shadow); }
+</style>
+</head>
+<body>
+
+<!-- Tooltip -->
+<div class="stat-tooltip" id="statTooltip"></div>
+
+<!-- ============================================================
+     MAIN SCENE
+     ============================================================ -->
+<div class="scene">
+
+  <!-- Header: name (left) + stats + photo btn (right) -->
+  <div class="scene-header">
+    <div class="pet-name-label empty" id="petNameLabel">이름 없음</div>
+    <div class="stats-row">
+      <div class="stat-item" data-stat="hunger">
+        <span class="stat-icon">🍖</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barHunger" style="width:80%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="sleep">
+        <span class="stat-icon">💤</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barSleep" style="width:70%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="love">
+        <span class="stat-icon">💕</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barLove" style="width:85%"></div></div>
+      </div>
+      <div class="stat-item" data-stat="clean">
+        <span class="stat-icon">🛁</span>
+        <div class="stat-bar-wrap"><div class="stat-bar-fill high" id="barClean" style="width:75%"></div></div>
+      </div>
+      <button class="photo-btn" id="openSettingsBtn" title="설정">📷</button>
+    </div>
+  </div>
+
+  <!-- Pet Box -->
+  <div class="pet-box" id="petBox">
+    <div class="floor-layer" id="floorLayer"></div>
+
+    <!-- Sleep scene overlay (inside box) -->
+    <div class="sleep-overlay" id="sleepOverlay">
+      <img class="sleep-scene-img" id="sleepSceneImg" src="" alt="">
+      <div class="sleep-zzz-wrap">
+        <span class="zzz-bubble">z</span>
+        <span class="zzz-bubble">z z</span>
+        <span class="zzz-bubble">Z Z Z</span>
+      </div>
+    </div>
+
+    <!-- Wash stage (inside box) -->
+    <div class="wash-stage" id="washStage">
+      <!-- shower & curtain: built by JS depending on images -->
+    </div>
+
+    <div class="no-avatar-msg" id="noAvatarMsg">📷 오른쪽 위 버튼을 눌러<br>아바타를 설정해주세요</div>
+  </div>
+
+  <!-- Action buttons below box, right-aligned -->
+  <div class="action-row" id="actionRow">
+    <button class="action-btn disabled" id="btnSleep">
+      <span class="btn-emoji" id="iconSleep">🛏️</span>
+      <span class="btn-label">재우기</span>
+    </button>
+    <button class="action-btn disabled" id="btnEat">
+      <span class="btn-emoji" id="iconEat">🍖</span>
+      <span class="btn-label">먹이기</span>
+    </button>
+    <button class="action-btn disabled" id="btnWash">
+      <span class="btn-emoji" id="iconWash">🚿</span>
+      <span class="btn-label">씻기기</span>
+    </button>
+  </div>
+
+</div><!-- /scene -->
+
+
+<!-- ============================================================
+     SETTINGS POPUP
+     ============================================================ -->
+<div class="popup-overlay hidden" id="settingsPopup">
+  <div class="popup-panel">
+    <h2>🐾 아바타 설정</h2>
+    <button class="popup-close" id="closeSettingsBtn">✕</button>
+
+    <label class="form-label">이름</label>
+    <input type="text" class="name-input" id="nameInput" placeholder="아바타 이름을 입력하세요" maxlength="12">
+
+    <p class="section-title">표정 이미지</p>
+    <div class="img-slots">
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotNormal" data-type="normal">
+          <span class="plus-icon">＋</span>
+          <img id="previewNormal" alt="일반">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="img-slot-label">😐 일반</span>
+        <input type="file" class="file-input" id="fileNormal" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotCry" data-type="cry">
+          <span class="plus-icon">＋</span>
+          <img id="previewCry" alt="우는">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="img-slot-label">😢 우는</span>
+        <input type="file" class="file-input" id="fileCry" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotAngry" data-type="angry">
+          <span class="plus-icon">＋</span>
+          <img id="previewAngry" alt="화남">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="img-slot-label">😠 화남</span>
+        <input type="file" class="file-input" id="fileAngry" accept="image/*">
+      </div>
+      <div class="img-slot">
+        <div class="img-preview-wrap" id="slotHappy" data-type="happy">
+          <span class="plus-icon">＋</span>
+          <img id="previewHappy" alt="웃음">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="img-slot-label">😄 웃음</span>
+        <input type="file" class="file-input" id="fileHappy" accept="image/*">
+      </div>
+    </div>
+
+    <p class="section-title">액션 이미지 (선택)</p>
+    <div class="scene-slots">
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotSleepScene" data-type="sleepScene">
+          <span class="plus-icon">＋</span>
+          <img id="previewSleepScene" alt="잠자기">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">🛏️ 잠자는 모습</span>
+        <input type="file" class="file-input" id="fileSleepScene" accept="image/*">
+      </div>
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotFood" data-type="food">
+          <span class="plus-icon">＋</span>
+          <img id="previewFood" alt="음식">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">🍖 음식</span>
+        <input type="file" class="file-input" id="fileFood" accept="image/*">
+      </div>
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotEating" data-type="eating">
+          <span class="plus-icon">＋</span>
+          <img id="previewEating" alt="먹는 표정">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">😋 먹는 표정</span>
+        <input type="file" class="file-input" id="fileEating" accept="image/*">
+      </div>
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotShower" data-type="shower">
+          <span class="plus-icon">＋</span>
+          <img id="previewShower" alt="샤워기">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">🚿 샤워기</span>
+        <input type="file" class="file-input" id="fileShower" accept="image/*">
+      </div>
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotCurtainOpen" data-type="curtainOpen">
+          <span class="plus-icon">＋</span>
+          <img id="previewCurtainOpen" alt="커튼(열림)">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">🪟 커튼(열림)</span>
+        <input type="file" class="file-input" id="fileCurtainOpen" accept="image/*">
+      </div>
+      <div class="scene-slot">
+        <div class="scene-slot-inner" id="slotCurtainClose" data-type="curtainClose">
+          <span class="plus-icon">＋</span>
+          <img id="previewCurtainClose" alt="커튼(닫힘)">
+          <div class="edit-over">✏️ 편집</div>
+        </div>
+        <span class="scene-slot-label">🪟 커튼(닫힘)</span>
+        <input type="file" class="file-input" id="fileCurtainClose" accept="image/*">
+      </div>
+    </div>
+
+    <button class="apply-btn" id="applyBtn">✅ 적용하기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     CROPPER POPUP
+     ============================================================ -->
+<div class="cropper-overlay hidden" id="cropperOverlay">
+  <div class="cropper-panel">
+    <h3>✂️ 이미지 편집</h3>
+    <div class="cropper-canvas-wrap">
+      <img id="cropperImg" src="" alt="crop">
+    </div>
+    <div class="cropper-tools">
+      <button class="ctool" id="cropRotL">↺ 회전</button>
+      <button class="ctool" id="cropRotR">↻ 회전</button>
+      <button class="ctool" id="cropFlip">↔ 좌우</button>
+      <button class="ctool" id="cropZI">＋</button>
+      <button class="ctool" id="cropZO">－</button>
+      <button class="ctool cancel" id="cropCancel">취소</button>
+      <button class="ctool primary" id="cropConfirm">적용 ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ============================================================
+//  APPLY CONFIG THEME
+// ============================================================
+(function applyTheme() {
+  const cfg = window.PET_CONFIG || {};
+  const t = cfg.theme || {};
+  const r = document.documentElement.style;
+  if (t.bg)         r.setProperty('--bg',         t.bg);
+  if (t.boxBg)      r.setProperty('--box-bg',      t.boxBg);
+  if (t.boxBorder)  r.setProperty('--box-border',  t.boxBorder);
+  if (t.accent)     r.setProperty('--accent',      t.accent);
+  if (t.accent2)    r.setProperty('--accent2',     t.accent2);
+  if (t.text)       r.setProperty('--text',        t.text);
+  if (t.muted)      r.setProperty('--muted',       t.muted);
+  if (t.floorGrad)  r.setProperty('--floor-grad',  t.floorGrad);
+  if (cfg.boxWidth)  r.setProperty('--box-w', cfg.boxWidth + 'px');
+  if (cfg.boxHeight) r.setProperty('--box-h', cfg.boxHeight + 'px');
+})();
+
+// ============================================================
+//  CONSTANTS from config
+// ============================================================
+const CFG = window.PET_CONFIG || {};
+const BOX_W    = CFG.boxWidth  || 380;
+const BOX_H    = CFG.boxHeight || 280;
+const AVT_SIZE = CFG.avatarSize || 80;
+const FLOOR_Y  = 30;
+
+// ============================================================
+//  STORAGE
+// ============================================================
+const STORAGE_KEY = 'petAppData_v3';
+
+let petData = {
+  name: '',
+  images: {
+    normal: null, cry: null, angry: null, happy: null,
+    sleepScene: null,
+    food: null, eating: null,
+    shower: null, curtainOpen: null, curtainClose: null,
+  },
+  stats: { hunger: 80, sleep: 70, love: 85, clean: 75 },
+  firstSetupDone: false,
+};
+
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(petData)); } catch(e) { console.warn('save failed', e); }
+}
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      petData = { ...petData, ...parsed, images: { ...petData.images, ...(parsed.images||{}) }, stats: { ...petData.stats, ...(parsed.stats||{}) } };
+    }
+  } catch(e) {}
+}
+
+// ============================================================
+//  ELEMENTS
+// ============================================================
+const petBox        = document.getElementById('petBox');
+const petNameLabel  = document.getElementById('petNameLabel');
+const noAvatarMsg   = document.getElementById('noAvatarMsg');
+const settingsPopup = document.getElementById('settingsPopup');
+const nameInput     = document.getElementById('nameInput');
+const openSettingsBtn  = document.getElementById('openSettingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const applyBtn      = document.getElementById('applyBtn');
+const sleepOverlay  = document.getElementById('sleepOverlay');
+const sleepSceneImg = document.getElementById('sleepSceneImg');
+const washStage     = document.getElementById('washStage');
+const btnSleep      = document.getElementById('btnSleep');
+const btnEat        = document.getElementById('btnEat');
+const btnWash       = document.getElementById('btnWash');
+
+// Stat bars
+const statBars = {
+  hunger: document.getElementById('barHunger'),
+  sleep:  document.getElementById('barSleep'),
+  love:   document.getElementById('barLove'),
+  clean:  document.getElementById('barClean'),
+};
+const statLabels = { hunger:'식욕', sleep:'수면', love:'애정', clean:'청결' };
+
+// ============================================================
+//  AVATAR STATE
+// ============================================================
+let avatarWrap = null;
+let avatarImgEl = null;
+let currentExpression = 'normal';
+let petX = 100, petY = FLOOR_Y;
+let petVX = 0.7, petVY = 0;
+let petRunTimer = 0, petJumpTimer = 0, petWobbleTimer = 0;
+let animRAF = null;
+let isDragging = false;
+let isFalling = false;
+let isActionPlaying = false;
+let lastTapTime = 0, tapCount = 0;
+
+// ============================================================
+//  INIT
+// ============================================================
+loadData();
+applyTheme_box();
+applyStatBars();
+applyNameLabel();
+applyActionButtonIcons();
+
+if (petData.images.normal) {
+  syncSettingsPreviews();
+  spawnAvatar();
+}
+if (!petData.firstSetupDone) {
+  openSettings(true);
+} else {
+  settingsPopup.classList.add('hidden');
+}
+
+// Apply box background/border from config
+function applyTheme_box() {
+  if (CFG.boxBgImage) {
+    petBox.style.backgroundImage = `url('${CFG.boxBgImage}')`;
+    document.getElementById('floorLayer').style.display = 'none';
+  }
+  if (CFG.boxBorderImage) {
+    petBox.style.border = 'none';
+    petBox.style.borderImage = `url('${CFG.boxBorderImage}') 20 round`;
+  }
+}
+
+// Apply action button icons from config
+function applyActionButtonIcons() {
+  const ab = CFG.actionButtons || {};
+  ['sleep','eat','wash'].forEach(key => {
+    const conf = ab[key];
+    if (!conf) return;
+    const btn = document.getElementById('btn' + key.charAt(0).toUpperCase() + key.slice(1));
+    const iconEl = document.getElementById('icon' + key.charAt(0).toUpperCase() + key.slice(1));
+    if (conf.image) {
+      const img = document.createElement('img');
+      img.src = conf.image;
+      img.className = 'btn-icon';
+      iconEl.replaceWith(img);
+    } else if (conf.emoji) {
+      iconEl.textContent = conf.emoji;
+    }
+    if (conf.label) {
+      btn.querySelector('.btn-label').textContent = conf.label;
+    }
+  });
+}
+
+// Stat decay
+setInterval(() => {
+  if (!petData.images.normal || isActionPlaying) return;
+  petData.stats.hunger = Math.max(0, petData.stats.hunger - 0.5);
+  petData.stats.sleep  = Math.max(0, petData.stats.sleep  - 0.3);
+  petData.stats.love   = Math.max(0, petData.stats.love   - 0.4);
+  petData.stats.clean  = Math.max(0, petData.stats.clean  - 0.35);
+  applyStatBars();
+  updateExpression();
+  saveData();
+}, 3000);
+
+// Stat manual boost on click
+document.querySelectorAll('.stat-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const stat = item.dataset.stat;
+    petData.stats[stat] = Math.min(100, petData.stats[stat] + 15);
+    applyStatBars(); updateExpression(); saveData();
+    showTooltip(item, `${statLabels[stat]} +15`);
+  });
+});
+
+// ============================================================
+//  SETTINGS
+// ============================================================
+openSettingsBtn.addEventListener('click', () => openSettings(false));
+closeSettingsBtn.addEventListener('click', closeSettings);
+
+let sessionImgs = {};
+
+function openSettings(isFirst) {
+  sessionImgs = { ...petData.images };
+  nameInput.value = petData.name || '';
+  syncSettingsPreviews();
+  settingsPopup.classList.remove('hidden');
+  closeSettingsBtn.style.display = isFirst ? 'none' : '';
+}
+function closeSettings() {
+  settingsPopup.classList.add('hidden');
+}
+
+// All image slot types for settings
+const ALL_TYPES = [
+  'normal','cry','angry','happy',
+  'sleepScene','food','eating',
+  'shower','curtainOpen','curtainClose',
+];
+
+function syncSettingsPreviews() {
+  ALL_TYPES.forEach(type => {
+    const previewEl = document.getElementById('preview' + cap(type));
+    const slotEl    = document.getElementById('slot'    + cap(type));
+    if (!previewEl || !slotEl) return;
+    const src = sessionImgs[type] || petData.images[type];
+    if (src) {
+      previewEl.src = src;
+      previewEl.classList.add('loaded');
+      slotEl.classList.add('has-img');
+    } else {
+      previewEl.src = '';
+      previewEl.classList.remove('loaded');
+      slotEl.classList.remove('has-img');
+    }
+  });
+}
+
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Wire up all file inputs
+ALL_TYPES.forEach(type => {
+  const slotEl  = document.getElementById('slot'    + cap(type));
+  const fileEl  = document.getElementById('file'    + cap(type));
+  if (!slotEl || !fileEl) return;
+  slotEl.addEventListener('click', () => fileEl.click());
+  fileEl.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => openCropper(type, ev.target.result);
+    reader.readAsDataURL(file);
+    fileEl.value = '';
+  });
+});
+
+applyBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) { nameInput.focus(); nameInput.style.borderColor='#e05252'; return; }
+  nameInput.style.borderColor = '';
+  petData.name = name;
+  petData.images = { ...petData.images, ...sessionImgs };
+  petData.firstSetupDone = true;
+  saveData();
+  applyNameLabel();
+  spawnAvatar();
+  closeSettings();
+});
+
+function applyNameLabel() {
+  if (petData.name) {
+    petNameLabel.textContent = petData.name;
+    petNameLabel.classList.remove('empty');
+  } else {
+    petNameLabel.textContent = '이름 없음';
+    petNameLabel.classList.add('empty');
+  }
+}
+
+// ============================================================
+//  CROPPER
+// ============================================================
+const cropperOverlay = document.getElementById('cropperOverlay');
+const cropperImg     = document.getElementById('cropperImg');
+let currentCropType = null;
+let cropperInstance = null;
+
+function openCropper(type, src) {
+  currentCropType = type;
+  cropperImg.src = src;
+  cropperOverlay.classList.remove('hidden');
+  if (cropperInstance) { cropperInstance.destroy(); cropperInstance = null; }
+  cropperImg.onload = () => {
+    cropperInstance = new Cropper(cropperImg, {
+      aspectRatio: NaN, viewMode: 1, autoCropArea: 0.85,
+      background: false, responsive: true, movable: true, zoomable: true, rotatable: true,
+    });
+  };
+}
+document.getElementById('cropRotL').addEventListener('click', () => cropperInstance?.rotate(-90));
+document.getElementById('cropRotR').addEventListener('click', () => cropperInstance?.rotate(90));
+document.getElementById('cropFlip').addEventListener('click', () => {
+  if (!cropperInstance) return;
+  cropperInstance.scaleX(cropperInstance.getData().scaleX === -1 ? 1 : -1);
+});
+document.getElementById('cropZI').addEventListener('click', () => cropperInstance?.zoom(0.1));
+document.getElementById('cropZO').addEventListener('click', () => cropperInstance?.zoom(-0.1));
+document.getElementById('cropCancel').addEventListener('click', () => {
+  cropperOverlay.classList.add('hidden');
+  cropperInstance?.destroy(); cropperInstance = null; currentCropType = null;
+});
+document.getElementById('cropConfirm').addEventListener('click', () => {
+  if (!cropperInstance || !currentCropType) return;
+  const canvas = cropperInstance.getCroppedCanvas({ fillColor:'transparent', imageSmoothingEnabled:true, imageSmoothingQuality:'high' });
+  const b64 = canvas.toDataURL('image/png');
+  sessionImgs[currentCropType] = b64;
+  const previewEl = document.getElementById('preview' + cap(currentCropType));
+  const slotEl    = document.getElementById('slot'    + cap(currentCropType));
+  if (previewEl) { previewEl.src = b64; previewEl.classList.add('loaded'); }
+  if (slotEl)    slotEl.classList.add('has-img');
+  cropperInstance.destroy(); cropperInstance = null;
+  cropperOverlay.classList.add('hidden'); currentCropType = null;
+});
+
+// ============================================================
+//  STATS
+// ============================================================
+function applyStatBars() {
+  Object.keys(statBars).forEach(key => {
+    const val = petData.stats[key];
+    statBars[key].style.width = val + '%';
+    statBars[key].className = 'stat-bar-fill ' + (val < 30 ? 'low' : val < 60 ? 'mid' : 'high');
+  });
+}
+
+function updateExpression() {
+  const min = Math.min(...Object.values(petData.stats));
+  let target = 'normal';
+  if      (min < 15) target = 'angry';
+  else if (min < 30) target = 'cry';
+  else if (min > 75) target = 'happy';
+  if (target !== currentExpression) {
+    currentExpression = target;
+    refreshAvatarImg();
+    petBox.classList.remove('sad-glow','angry-glow');
+    if (target === 'cry')   petBox.classList.add('sad-glow');
+    if (target === 'angry') petBox.classList.add('angry-glow');
+  }
+}
+
+// ============================================================
+//  AVATAR
+// ============================================================
+function spawnAvatar() {
+  if (!petData.images.normal) return;
+  if (avatarWrap) avatarWrap.remove();
+  noAvatarMsg.style.display = 'none';
+
+  avatarWrap  = document.createElement('div');
+  avatarWrap.className = 'avatar-wrap';
+  avatarImgEl = document.createElement('img');
+  avatarImgEl.className = 'avatar-img';
+  avatarImgEl.draggable = false;
+  avatarWrap.appendChild(avatarImgEl);
+  petBox.appendChild(avatarWrap);
+
+  petX = 100; petY = FLOOR_Y; petVX = 0.7; petVY = 0; isFalling = false;
+  refreshAvatarImg();
+  startAnimation();
+  setupInteractions();
+  updateExpression();
+  enableActionButtons();
+}
+
+function refreshAvatarImg() {
+  if (!avatarImgEl) return;
+  const src = petData.images[currentExpression] || petData.images.normal;
+  if (src) avatarImgEl.src = src;
+}
+
+function enableActionButtons() {
+  [btnSleep, btnEat, btnWash].forEach(b => b.classList.remove('disabled'));
+}
+
+// ============================================================
+//  ANIMATION LOOP
+// ============================================================
+function startAnimation() {
+  if (animRAF) cancelAnimationFrame(animRAF);
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 16, 3);
+    lastTime = now;
+    if (!isDragging && !isActionPlaying) {
+      if (isFalling) {
+        petVY -= 0.6 * dt;
+        petY  += petVY * dt;
+        if (petY <= FLOOR_Y) {
+          petY = FLOOR_Y; petVY = 0; isFalling = false;
+          petData.stats.clean = Math.max(0, petData.stats.clean - 3);
+          applyStatBars(); triggerWobble();
+        }
+      } else {
+        petX += petVX * dt;
+        if (petX > BOX_W - AVT_SIZE - 8) { petX = BOX_W - AVT_SIZE - 8; petVX = -Math.abs(petVX); avatarWrap.classList.add('flipped'); }
+        if (petX < 8)                    { petX = 8;                     petVX =  Math.abs(petVX); avatarWrap.classList.remove('flipped'); }
+        petRunTimer   -= dt; if (petRunTimer   <= 0) { petVX = (petVX>0?1:-1)*(Math.random()<0.3?2.2:0.7); petRunTimer   = 60  + Math.random()*120; }
+        petWobbleTimer -= dt; if (petWobbleTimer <= 0) { triggerWobble(); petWobbleTimer = 90  + Math.random()*150; }
+        petJumpTimer  -= dt; if (petJumpTimer  <= 0) { triggerJump();   petJumpTimer  = 120 + Math.random()*200; }
+      }
+    }
+    avatarWrap.style.left   = petX + 'px';
+    avatarWrap.style.bottom = petY + 'px';
+    animRAF = requestAnimationFrame(loop);
+  }
+  animRAF = requestAnimationFrame(loop);
+}
+
+function triggerWobble() {
+  if (!avatarWrap) return;
+  avatarWrap.classList.remove('wobble'); void avatarWrap.offsetWidth;
+  avatarWrap.classList.add('wobble');
+  setTimeout(() => avatarWrap?.classList.remove('wobble'), 400);
+}
+function triggerJump() {
+  if (!avatarWrap || isFalling || isActionPlaying) return;
+  avatarWrap.classList.add('jump');
+  setTimeout(() => avatarWrap?.classList.remove('jump'), 400);
+}
+
+// ============================================================
+//  DRAG & DOUBLE-TAP
+// ============================================================
+function setupInteractions() {
+  // Double-tap
+  avatarWrap.addEventListener('click', e => {
+    if (isDragging || isActionPlaying) return;
+    const now = Date.now();
+    if (now - lastTapTime < 350) {
+      tapCount++;
+      if (tapCount >= 2) { tapCount = 0; onPet(); }
+    } else { tapCount = 1; }
+    lastTapTime = now;
+  });
+
+  // Drag-throw
+  let dragVX=0, dragVY=0, lastDX=0, lastDY=0, active=false;
+  const pos = e => e.touches ? { x:e.touches[0].clientX, y:e.touches[0].clientY } : { x:e.clientX, y:e.clientY };
+
+  avatarWrap.addEventListener('mousedown',  start);
+  avatarWrap.addEventListener('touchstart', start, { passive:false });
+  document.addEventListener('mousemove',  move);
+  document.addEventListener('touchmove',  move, { passive:false });
+  document.addEventListener('mouseup',    end);
+  document.addEventListener('touchend',   end);
+
+  function start(e) {
+    if (isActionPlaying) return;
+    e.preventDefault(); isDragging=true; active=true; isFalling=false; petVY=0;
+    const p=pos(e); lastDX=p.x; lastDY=p.y; dragVX=0; dragVY=0;
+  }
+  function move(e) {
+    if (!active) return;
+    e.preventDefault();
+    const p=pos(e), rect=petBox.getBoundingClientRect();
+    dragVX=p.x-lastDX; dragVY=p.y-lastDY; lastDX=p.x; lastDY=p.y;
+    petX = Math.max(0, Math.min(BOX_W-AVT_SIZE, p.x - rect.left - AVT_SIZE/2));
+    petY = Math.max(0, Math.min(BOX_H-AVT_SIZE, rect.bottom - p.y - AVT_SIZE/2));
+  }
+  function end() {
+    if (!active) return; active=false; isDragging=false;
+    if (dragVY < -3) { isFalling=true; petVY=Math.abs(dragVY)*1.5; petVX=dragVX*0.4||petVX; }
+  }
+}
+
+function onPet() {
+  const heart = document.createElement('div');
+  heart.className = 'heart-pop'; heart.textContent = '💗';
+  avatarWrap.appendChild(heart);
+  setTimeout(() => heart.remove(), 700);
+  const prev = currentExpression;
+  if (currentExpression === 'normal') {
+    currentExpression = 'happy'; refreshAvatarImg();
+    setTimeout(() => { currentExpression=prev; refreshAvatarImg(); }, 1500);
+  }
+  petData.stats.love = Math.min(100, petData.stats.love + 8);
+  applyStatBars(); updateExpression(); saveData();
+}
+
+// ============================================================
+//  ACTION: SLEEP
+// ============================================================
+btnSleep.addEventListener('click', () => {
+  if (isActionPlaying) return;
+  playSleepAction();
+});
+
+function playSleepAction() {
+  isActionPlaying = true;
+  // Set sleep scene image
+  const sceneImg = petData.images.sleepScene;
+  if (sceneImg) { sleepSceneImg.src = sceneImg; sleepSceneImg.style.display='block'; }
+  else          { sleepSceneImg.style.display='none'; }
+
+  // Move avatar to center bottom, freeze
+  petX = BOX_W/2 - AVT_SIZE/2; petY = FLOOR_Y;
+  // Change to cry/normal – sleep uses normal by default
+  const prev = currentExpression;
+
+  // Fade dark
+  setTimeout(() => sleepOverlay.classList.add('dark'), 50);
+
+  // Stay asleep 3s, then fade back
+  setTimeout(() => {
+    sleepOverlay.classList.remove('dark');
+    setTimeout(() => {
+      isActionPlaying = false;
+      petData.stats.sleep = Math.min(100, petData.stats.sleep + 40);
+      applyStatBars(); updateExpression(); saveData();
+    }, 700);
+  }, 3500);
+}
+
+// ============================================================
+//  ACTION: EAT
+// ============================================================
+btnEat.addEventListener('click', () => {
+  if (isActionPlaying) return;
+  playEatAction();
+});
+
+function playEatAction() {
+  isActionPlaying = true;
+
+  // Create food element
+  const foodEl = document.createElement('div');
+  foodEl.className = 'food-item';
+  foodEl.style.left = (petX + AVT_SIZE/2 - 24) + 'px';
+  foodEl.style.top  = '0px';
+
+  const foodSrc = petData.images.food;
+  if (foodSrc) {
+    const img = document.createElement('img');
+    img.src = foodSrc;
+    foodEl.appendChild(img);
+  } else {
+    const em = document.createElement('div');
+    em.className = 'food-emoji'; em.textContent = '🍖';
+    foodEl.appendChild(em);
+  }
+  petBox.appendChild(foodEl);
+
+  // Animate food falling with rAF
+  let foodY = 0;
+  let foodVY = 2;
+  const foodTargetY = BOX_H - FLOOR_Y - AVT_SIZE - 10; // near avatar
+  let eaten = false;
+
+  function dropLoop() {
+    foodY += foodVY;
+    foodVY += 0.18; // gravity
+    foodEl.style.top = foodY + 'px';
+
+    // Check collision with avatar
+    const avatarTop = BOX_H - petY - AVT_SIZE;
+    if (!eaten && foodY >= foodTargetY) {
+      eaten = true;
+      foodEl.remove();
+      // Show eating expression
+      const eatSrc = petData.images.eating || petData.images.happy;
+      if (eatSrc) {
+        const prevExpr = currentExpression;
+        const prevSrc  = avatarImgEl.src;
+        avatarImgEl.src = eatSrc;
+        triggerWobble();
+        setTimeout(() => {
+          avatarImgEl.src = prevSrc || (petData.images[prevExpr] || petData.images.normal);
+          isActionPlaying = false;
+          petData.stats.hunger = Math.min(100, petData.stats.hunger + 35);
+          applyStatBars(); updateExpression(); saveData();
+        }, 1500);
+      } else {
+        isActionPlaying = false;
+        petData.stats.hunger = Math.min(100, petData.stats.hunger + 35);
+        applyStatBars(); updateExpression(); saveData();
+      }
+      return;
+    }
+    // If food hits floor without being eaten
+    if (foodY > BOX_H + 10) {
+      foodEl.remove();
+      isActionPlaying = false;
+      return;
+    }
+    requestAnimationFrame(dropLoop);
+  }
+  requestAnimationFrame(dropLoop);
+}
+
+// ============================================================
+//  ACTION: WASH
+// ============================================================
+btnWash.addEventListener('click', () => {
+  if (isActionPlaying) return;
+  playWashAction();
+});
+
+function playWashAction() {
+  isActionPlaying = true;
+  washStage.innerHTML = '';
+  washStage.classList.add('visible');
+
+  const showerSrc      = petData.images.shower;
+  const curtainOpenSrc = petData.images.curtainOpen;
+  const curtainCloseSrc= petData.images.curtainClose;
+
+  // Build shower
+  if (showerSrc) {
+    const sw = document.createElement('div');
+    sw.className = 'wash-shower-wrap';
+    const si = document.createElement('img'); si.src = showerSrc; si.alt='shower';
+    sw.appendChild(si); washStage.appendChild(sw);
+  } else {
+    // emoji fallback
+    const sw = document.createElement('div');
+    sw.className = 'shower-emoji-wrap';
+    sw.innerHTML = '<span>🚿</span><span style="font-size:1rem;color:#aadcff">💧💧💧</span>';
+    washStage.appendChild(sw);
+  }
+
+  // Build curtain (open state)
+  let curtainEl;
+  if (curtainOpenSrc) {
+    curtainEl = document.createElement('div');
+    curtainEl.className = 'wash-curtain-wrap';
+    const ci = document.createElement('img'); ci.src = curtainOpenSrc; ci.alt='curtain';
+    curtainEl.appendChild(ci); washStage.appendChild(curtainEl);
+  } else {
+    curtainEl = document.createElement('div');
+    curtainEl.className = 'curtain-emoji-wrap';
+    curtainEl.textContent = '🎋 커튼';
+    washStage.appendChild(curtainEl);
+  }
+
+  // Step 1: avatar slides left into shower (0.7s)
+  const origX = petX;
+  const targetX = 25; // inside shower area
+  const slideMs = 700;
+  const startTime = performance.now();
+  function slideLeft(now) {
+    const t = Math.min((now - startTime) / slideMs, 1);
+    petX = origX + (targetX - origX) * easeInOut(t);
+    if (t < 1) { requestAnimationFrame(slideLeft); }
+    else { petX = targetX; onAvatarInShower(); }
+  }
+  requestAnimationFrame(slideLeft);
+
+  function onAvatarInShower() {
+    // Step 2: curtain closes over avatar
+    setTimeout(() => {
+      if (curtainCloseSrc && curtainEl.tagName === 'DIV') {
+        // swap to close image
+        curtainEl.querySelector('img').src = curtainCloseSrc;
+      }
+      curtainEl.classList.add('closed');
+
+      // Step 3: sparks appear 0.8s after curtain closes
+      setTimeout(() => {
+        showSparks();
+        // Step 4: after sparks, curtain opens, avatar exits
+        setTimeout(() => {
+          curtainEl.classList.remove('closed');
+          if (curtainOpenSrc && curtainEl.querySelector('img')) {
+            curtainEl.querySelector('img').src = curtainOpenSrc;
+          }
+
+          // Slide avatar back right
+          const backStart = performance.now();
+          const backTarget = Math.min(BOX_W - AVT_SIZE - 20, 160);
+          function slideRight(now) {
+            const t = Math.min((now - backStart) / slideMs, 1);
+            petX = targetX + (backTarget - targetX) * easeInOut(t);
+            if (t < 1) { requestAnimationFrame(slideRight); }
+            else {
+              petX = backTarget; petVX = 0.7;
+              washStage.classList.remove('visible');
+              washStage.innerHTML = '';
+              isActionPlaying = false;
+              petData.stats.clean = Math.min(100, petData.stats.clean + 40);
+              applyStatBars(); updateExpression(); saveData();
+            }
+          }
+          requestAnimationFrame(slideRight);
+        }, 900);
+      }, 600);
+    }, 400);
+  }
+}
+
+function showSparks() {
+  const sparkChars = ['✨','⭐','💫','🌟','✦'];
+  const sparkContainer = document.createElement('div');
+  sparkContainer.className = 'spark-container';
+  washStage.appendChild(sparkContainer);
+
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => {
+      const s = document.createElement('span');
+      s.className = 'spark';
+      s.textContent = sparkChars[Math.floor(Math.random()*sparkChars.length)];
+      s.style.left = (30 + Math.random() * 80) + 'px';
+      s.style.top  = (20 + Math.random() * 100) + 'px';
+      s.style.animationDelay = (Math.random() * 0.3) + 's';
+      sparkContainer.appendChild(s);
+      setTimeout(() => s.remove(), 900);
+    }, i * 80);
+  }
+  setTimeout(() => sparkContainer.remove(), 1200);
+}
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+// ============================================================
+//  TOOLTIP
+// ============================================================
+function showTooltip(el, text) {
+  const tt = document.getElementById('statTooltip');
+  const rect = el.getBoundingClientRect();
+  tt.textContent = text;
+  tt.style.left = rect.left + 'px';
+  tt.style.top  = (rect.bottom + 6) + 'px';
+  tt.classList.add('show');
+  setTimeout(() => tt.classList.remove('show'), 1200);
+}
+</script>
+</body>
+</html>
