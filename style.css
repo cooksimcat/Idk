@@ -1,0 +1,579 @@
+/* ============================================================
+   VIRTUAL PET APP — style.css
+   ============================================================ */
+
+/* ── 변수 ── */
+:root {
+  --bg:           #fdf6ee;
+  --box-bg:       #fff9f3;
+  --box-border:   #e8c9a0;
+  --accent:       #f4845f;
+  --accent2:      #7ec8c8;
+  --text:         #3a2e26;
+  --muted:        #b89a7a;
+  --shadow:       rgba(90,60,30,0.10);
+  --stat-bar:     #e8c9a0;
+  --btn-bg:       #f4845f;
+  --btn-text:     #fff;
+  --popup-bg:     rgba(58,46,38,0.45);
+  --panel-bg:     #fff9f3;
+  --panel-border: #e8c9a0;
+}
+
+/* ── 리셋 ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(circle at 20% 20%, #fde9d4 0%, transparent 55%),
+    radial-gradient(circle at 80% 80%, #d4f0f0 0%, transparent 55%);
+  font-family: 'Gowun Dodum', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ============================================================
+   씬 & 헤더
+   ============================================================ */
+.scene {
+  position: relative;
+  width: 380px;
+}
+
+.scene-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  padding: 0 4px;
+}
+
+.pet-name-label {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.5rem;
+  color: var(--text);
+  letter-spacing: -0.5px;
+  min-width: 60px;
+}
+.pet-name-label.empty {
+  color: var(--muted);
+  font-size: 1rem;
+  font-family: 'Gowun Dodum', sans-serif;
+}
+
+/* ── 스탯 행 ── */
+.stats-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.stat-icon { font-size: 1.1rem; }
+
+.stat-bar-wrap {
+  width: 36px;
+  height: 6px;
+  background: var(--stat-bar);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s, background 0.5s;
+}
+.stat-bar-fill.low  { background: #e05252; }
+.stat-bar-fill.mid  { background: #f4c05f; }
+.stat-bar-fill.high { background: var(--accent2); }
+
+/* ── 사진 버튼 ── */
+.photo-btn {
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.photo-btn:hover { transform: scale(1.1); background: #d96840; }
+
+/* ============================================================
+   펫 박스
+   ============================================================ */
+.pet-box {
+  width: 380px;
+  height: 280px;
+  background: var(--box-bg);
+  border: 2.5px solid var(--box-border);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  transition: box-shadow 0.5s;
+}
+
+/* 바닥 그라데이션 */
+.pet-box::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: linear-gradient(to top, #f5e4cc, transparent);
+  border-radius: 0 0 22px 22px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 박스 틀 오버레이 — 개발자가 교체하는 이미지 */
+.box-frame-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 10;  /* 아바타(z:5)보다 위, 버튼(z:15)보다 아래 */
+}
+
+/* 박스 상태 글로우 */
+.pet-box.sad-glow   { box-shadow: 0 8px 32px rgba(80,120,255,0.20), 0 2px 8px var(--shadow); }
+.pet-box.angry-glow { box-shadow: 0 8px 32px rgba(255,80,80,0.25),  0 2px 8px var(--shadow); }
+
+/* ── 아바타 없을 때 안내 ── */
+.no-avatar-msg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+  line-height: 1.6;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ============================================================
+   아바타
+   ============================================================ */
+.avatar-wrap {
+  position: absolute;
+  bottom: 30px;
+  width: 80px;
+  height: 80px;
+  z-index: 5;
+  will-change: transform, left, bottom;
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.1s;
+}
+.avatar-wrap.flipped .avatar-img { transform: scaleX(-1); }
+
+/* 하트 팝업 */
+.heart-pop {
+  position: absolute;
+  top: -28px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  opacity: 0;
+  pointer-events: none;
+  animation: heartPop 0.7s ease forwards;
+  z-index: 20;
+}
+@keyframes heartPop {
+  0%   { opacity:0; transform: translateX(-50%) scale(0.5) translateY(0); }
+  30%  { opacity:1; transform: translateX(-50%) scale(1.3) translateY(-8px); }
+  70%  { opacity:1; transform: translateX(-50%) scale(1)   translateY(-14px); }
+  100% { opacity:0; transform: translateX(-50%) scale(0.8) translateY(-22px); }
+}
+
+/* 워블 / 점프 애니메이션 */
+@keyframes idleWobble {
+  0%,100% { transform: rotate(0deg); }
+  25%     { transform: rotate(-2deg); }
+  75%     { transform: rotate(2deg); }
+}
+@keyframes jumpUp {
+  0%,100% { transform: translateY(0); }
+  50%     { transform: translateY(-22px); }
+}
+.avatar-wrap.wobble .avatar-img { animation: idleWobble 0.4s ease-in-out; }
+.avatar-wrap.jump               { animation: jumpUp 0.4s ease; }
+
+/* ── 음식 아이템 ── */
+.food-item {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* ============================================================
+   액션 버튼 (우하단)
+   ============================================================ */
+.action-btns {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 15;
+}
+.action-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1.5px solid var(--box-border);
+  background: rgba(255,249,243,0.88);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: transform 0.15s, background 0.15s;
+  padding: 4px;
+}
+.action-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.action-btn:hover  { transform: scale(1.1); background: rgba(255,240,225,0.95); }
+.action-btn:active { transform: scale(0.95); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ============================================================
+   수면 오버레이
+   ============================================================ */
+.sleep-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 8, 20, 0.82);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.sleep-overlay.visible { opacity: 1; }
+.sleep-overlay.hidden  { display: none; }
+
+.sleep-avatar-img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(160,140,255,0.5));
+}
+
+/* 별 반짝 */
+.sleep-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.sleep-star {
+  position: absolute;
+  font-size: 1rem;
+  animation: starFloat var(--dur, 2s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  opacity: 0;
+}
+@keyframes starFloat {
+  0%   { opacity:0; transform: translateY(0) scale(0.6); }
+  30%  { opacity:1; }
+  70%  { opacity:0.8; transform: translateY(-30px) scale(1); }
+  100% { opacity:0; transform: translateY(-50px) scale(0.7); }
+}
+
+/* ============================================================
+   씻기 씬
+   ============================================================ */
+.shower-scene {
+  position: absolute;
+  left: 0; bottom: 24px;
+  width: 180px;
+  height: 220px;
+  z-index: 8;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.shower-scene.visible { opacity: 1; }
+
+.shower-img {
+  position: absolute;
+  bottom: 0; left: 20px;
+  width: 90px;
+  height: 160px;
+  object-fit: contain;
+}
+.curtain-img {
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 160px;
+  height: 210px;
+  object-fit: contain;
+  z-index: 9;
+  transition: opacity 0.4s;
+}
+.sparkle-img {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  z-index: 10;
+  animation: sparklePulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes sparklePulse {
+  from { transform: translate(-50%, -50%) scale(0.85); opacity: 0.7; }
+  to   { transform: translate(-50%, -50%) scale(1.1);  opacity: 1; }
+}
+.hidden { display: none !important; }
+
+/* ============================================================
+   설정 팝업
+   ============================================================ */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--popup-bg);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.popup-overlay.hidden { display: none; }
+
+.popup-panel {
+  background: var(--panel-bg);
+  border: 2px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 28px 24px 24px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(90,60,30,0.18);
+  position: relative;
+}
+.popup-panel h2 {
+  font-family: 'Jua', sans-serif;
+  font-size: 1.3rem;
+  margin-bottom: 18px;
+}
+.popup-panel .close-btn {
+  position: absolute;
+  top: 14px; right: 18px;
+  background: none; border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: var(--muted);
+}
+.popup-panel .close-btn:hover { color: var(--text); }
+
+.name-input-wrap { margin-bottom: 20px; }
+.name-input-wrap label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.name-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--box-border);
+  border-radius: 10px;
+  font-family: 'Gowun Dodum', sans-serif;
+  font-size: 1rem;
+  background: #fff;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.name-input:focus { border-color: var(--accent); }
+
+/* 이미지 슬롯 */
+.img-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.img-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.img-slot label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
+.img-preview-wrap {
+  width: 80px;
+  height: 80px;
+  border: 1.5px dashed var(--box-border);
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.2s;
+}
+.img-preview-wrap:hover { border-color: var(--accent); }
+.img-preview-wrap img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: none;
+}
+.img-preview-wrap img.loaded { display: block; }
+.img-preview-wrap .plus-icon { font-size: 1.6rem; color: var(--muted); }
+.img-preview-wrap.has-img .plus-icon { display: none; }
+.edit-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.4);
+  color: #fff; font-size: 0.72rem;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.2s;
+  border-radius: 10px;
+}
+.img-preview-wrap:hover .edit-overlay { opacity: 1; }
+
+.file-input { display: none; }
+
+.apply-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border: none;
+  border-radius: 12px;
+  font-family: 'Jua', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.apply-btn:hover  { background: #d96840; transform: translateY(-1px); }
+.apply-btn:active { transform: translateY(0); }
+
+/* ============================================================
+   크롭 팝업
+   ============================================================ */
+.cropper-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30,20,10,0.75);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.cropper-overlay.hidden { display: none; }
+
+.cropper-panel {
+  background: #2a2018;
+  border-radius: 20px;
+  padding: 20px;
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.cropper-panel h3 {
+  font-family: 'Jua', sans-serif;
+  color: #fff;
+  font-size: 1rem;
+}
+.cropper-canvas-wrap {
+  width: 100%;
+  height: 300px;
+  background: #1a1208;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cropper-canvas-wrap img { max-width: 100%; max-height: 100%; display: block; }
+
+.cropper-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.crop-tool-btn {
+  padding: 7px 12px;
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-family: 'Gowun Dodum', sans-serif;
+  transition: background 0.15s;
+}
+.crop-tool-btn:hover   { background: rgba(255,255,255,0.2); }
+.crop-tool-btn.primary { background: var(--accent); border-color: var(--accent); margin-left: auto; }
+.crop-tool-btn.primary:hover { background: #d96840; }
+.crop-tool-btn.cancel  { color: #aaa; }
+
+/* ── 스탯 툴팁 ── */
+.stat-tooltip {
+  position: fixed;
+  background: #3a2e26ee;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  pointer-events: none;
+  z-index: 50;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.stat-tooltip.show { opacity: 1; }
